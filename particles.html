@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Particles: Chaos → Logo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            overflow-x: hidden;
+            background: black;
+        }
+
+        section {
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            /* vertical center */
+            justify-content: center;
+            /* horizontal center */
+            text-align: center;
+            padding: 20px;
+            color: aliceblue;
+            font-size: xx-large;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: -1;
+            pointer-events: none;
+        }
+    </style>
+</head>
+
+<body>
+
+    <canvas id="canvas"></canvas>
+
+    <section>
+        <h1>xyronixlabs</h1>
+    </section>
+    <section>
+        <h2>Welcome To New Era</h2>
+    </section>
+
+    <script>
+        const canvas = document.getElementById("canvas");
+        const ctx = canvas.getContext("2d");
+
+        let particles = [];
+        let w, h;
+        let time = 0;
+        let logoPoints = [];
+
+        function resize() {
+            w = canvas.width = window.innerWidth;
+            h = canvas.height = window.innerHeight;
+        }
+        window.addEventListener("resize", resize);
+        resize();
+
+        function easeOut(t) {
+            return 1 - Math.pow(1 - t, 3);
+        }
+
+        // LOAD IMAGE AND EXTRACT SHAPE
+        const img = new Image();
+        img.src = "logo.png"; // place your image in same folder
+
+        img.onload = () => {
+            const off = document.createElement("canvas");
+            const octx = off.getContext("2d");
+
+            const size = 300;
+            off.width = size;
+            off.height = size;
+
+            octx.drawImage(img, 0, 0, size, size);
+
+            const data = octx.getImageData(0, 0, size, size).data;
+
+            logoPoints = [];
+
+            for (let y = 0; y < size; y += 3) {
+                for (let x = 0; x < size; x += 3) {
+                    const i = (y * size + x) * 4;
+                    const alpha = data[i + 3];
+
+                    if (alpha > 150) {
+                        logoPoints.push({ x, y });
+                    }
+                }
+            }
+
+            initParticles();
+        };
+
+        class Particle {
+            constructor(target) {
+                this.x = Math.random() * w;
+                this.y = Math.random() * h;
+
+                this.vx = (Math.random() - 0.5) * 2;
+                this.vy = (Math.random() - 0.5) * 2;
+
+                this.seed = Math.random() * 1000;
+
+                // map image point to screen
+                this.endX = w - 300 + target.x;
+                this.endY = h - 300 + target.y;
+            }
+
+            update(progress) {
+                const t = easeOut(progress);
+
+                if (progress < 0.5) {
+                    // chaos
+                    this.vx += (Math.random() - 0.5) * 0.2;
+                    this.vy += (Math.random() - 0.5) * 0.2;
+
+                    this.vx *= 0.98;
+                    this.vy *= 0.98;
+
+                    this.x += this.vx + Math.sin(time + this.seed) * 0.3;
+                    this.y += this.vy + Math.cos(time + this.seed) * 0.3;
+                } else {
+                    // form logo
+                    this.x += (this.endX - this.x) * 0.08 * t;
+                    this.y += (this.endY - this.y) * 0.08 * t;
+
+                    this.x += Math.sin(time + this.seed) * 0.1;
+                    this.y += Math.cos(time + this.seed) * 0.1;
+                }
+            }
+
+            draw() {
+                ctx.fillStyle = "#ff4d4d";
+                ctx.fillRect(this.x, this.y, 2, 2);
+            }
+        }
+
+        function initParticles() {
+            particles = [];
+
+            for (let i = 0; i < logoPoints.length; i++) {
+                particles.push(new Particle(logoPoints[i]));
+            }
+        }
+
+        function getScrollProgress() {
+            return Math.min(window.scrollY / window.innerHeight, 1);
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, w, h);
+
+            time += 0.01;
+
+            const progress = getScrollProgress();
+
+            particles.forEach(p => {
+                p.update(progress);
+                p.draw();
+            });
+
+            requestAnimationFrame(animate);
+        }
+
+        animate();
+    </script>
+
+</body>
+
+</html>
